@@ -464,7 +464,7 @@ Ast.createAst =
   function (source, config)
   {
     
-    var ast = esprima.parse(source, {loc: (config ? config.loc : false)});
+    var ast = esprima.parse(source, {loc: (config ? config.loc : false), owningComments : true, comment : true, tokens: true, range : true});
     if (config && config.resetTagCounter)
     {
       __nodeCounter__ = 0;
@@ -549,7 +549,7 @@ Ast.createAst =
   }
   
   // createFromChildren
-  
+  Ast.parent = parent;
   function parent(node, ast)
   {
     var cs = Ast.children(ast);
