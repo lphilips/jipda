@@ -1,10 +1,3 @@
-function displayTime(ms)
-{
-  var min = Math.floor(ms / 60000);
-  var sec = Math.floor((ms % 60000) / 1000);
-  return min + "'" + (sec < 10 ? "0" : "") + sec + "\"";
-}
-
 function displayPurity(ast, pmap)
 {
   var fs = Ast.nodes(ast).filter(function (node) {return node.type === "FunctionDeclaration" || node.type === "FunctionExpression"});
@@ -18,13 +11,17 @@ function displayPurity(ast, pmap)
 
 function runBenchmarks(benchmarks)
 {
-  var bprefix = "test/resources/";
+  var bprefix = "../test/resources/";
   benchmarks = benchmarks ||
                     ["fib.js",
                      "gcIpdExample.js",
                      "navier-stokes-light.js",
+                     "sunspider/access-nbody.js",
                      "sunspider/controlflow-recursive.js",
-                     "sunspider/access-nbody.js"]
+                     "sunspider/crypto-sha1.js",
+                     "sunspider/math-spectral-norm.js",
+                     "jolden/tree-add.js",
+                     ]
                     //;
   return benchmarks.map(
     function (benchmark)
@@ -39,13 +36,13 @@ function runBenchmarks(benchmarks)
       var system = cesk.explore(ast);
       var sgTime = Date.now() - sgStart;
 
-      print("sgTime", displayTime(sgTime), "states", system.numStates);
+      print("sgTime", Formatter.displayTime(sgTime), "states", system.states.count());
 
       var pmStart = Date.now();
-      var pmap = computePurity(system.initial, system.sstore);
+      var pmap = computePurity(ast, system.initial, system.contexts);
       var pmTime = Date.now() - pmStart;
       
-      print("pmTime", displayTime(pmTime), "count", pmap.count());
+      print("pmTime", Formatter.displayTime(pmTime), "count", pmap.count());
       
       displayPurity(ast, pmap);
       
@@ -57,7 +54,6 @@ function runBenchmarks(benchmarks)
 
 function r()
 {
-  b();
   return runBenchmarks();
 }
 
@@ -68,21 +64,4 @@ function serverTest()
                  "octane/richards.js",
                  "sunspider/3d-cube.js",
                  "octane/splay.js"]);
-}
-
-function concEval(src)
-{
-  var ast = Ast.createAst(src);
-  var cesk = jsCesk({a:createConcAg(), l: new ConcLattice()});
-  var s = cesk.explore(ast);
-  print(s.value);
-}
-
-function typeEval(src)
-{
-  var ast = Ast.createAst(src);
-  var cesk = jsCesk({a:createTagAg(), l: new JipdaLattice()});
-  var system = cesk.explore(ast);
-  var result = statesResult(system.states);
-  print(result);
 }

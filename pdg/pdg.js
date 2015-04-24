@@ -48,7 +48,7 @@ Pdg._explore =
 Pdg.getCallExpression =
   function (node)
   {
-    if (Ast.isCallExpression(node))
+    if (Ast.isCallExpression(node) || Ast.isNewExpression(node))
     {
       return node;
     }
@@ -133,11 +133,10 @@ Pdg.functionsCalled =
     {
       result = ArraySet.empty();
       var system = Pdg._explore(ast);
-      var sstore = system.sstore;
-      sstore.forEach(
-        function (entry)
+      var contexts = system.contexts;
+      contexts.forEach(
+        function (ctx)
         {
-          var ctx = entry[0];
           var ex = ctx.ex;
           if (ex === callExpression)
           {
@@ -151,4 +150,32 @@ Pdg.functionsCalled =
       callNode._functionsCalled = result;
     }
     return result;
+  }
+
+Pdg.isConstructor =
+  function (funNode)
+  {
+    if (funNode._isConstructor === undefined)
+    {
+      var system = Pdg._explore(ast);
+      var contexts = system.contexts;
+      contexts.forEach(
+        function (ctx)
+        {
+          var callable = ctx.callable;
+          if (callable.node)
+          {
+            var ex = ctx.ex;
+            if (Ast.isNewExpression(ex))
+            {
+              callable.node._isConstructor = true;
+            }
+            else
+            {
+              callable.node._isFunction = true;
+            }
+          }
+        });
+    }
+    return !!funNode._isConstructor;
   }

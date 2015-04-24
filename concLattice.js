@@ -42,10 +42,46 @@ ConcValue.prototype.subsumes =
     return this.equals(x);
   }
 
+ConcValue.prototype.projectString =
+  function (x)
+  {
+    return (typeof this.value === "string") ? this : BOT;
+  }
+
 ConcValue.prototype.ToString =
   function (x)
   {
     return new ConcValue(String(this.value));
+  }
+
+ConcValue.prototype.charAt =
+  function (x)
+  {
+    return new ConcValue(this.value.charAt(x.value));
+  }
+
+ConcValue.prototype.charCodeAt =
+  function (x)
+  {
+    return new ConcValue(this.value.charCodeAt(x.value));
+  }
+
+ConcValue.prototype.startsWith =
+  function (x)
+  {
+    return new ConcValue(this.value.startsWith(x.value));
+  }
+
+ConcValue.prototype.stringLength =
+  function (x)
+  {
+    return new ConcValue(this.value.length);
+  }
+
+ConcValue.prototype.parseInt =
+  function ()
+  {
+    return new ConcValue(parseInt(this.value, 10));
   }
 
 ConcValue.prototype.ToNumber =
@@ -269,23 +305,73 @@ ConcLattice.prototype.div =
 ConcLattice.prototype.eqq =
   function (x, y)
   {
-    if (x instanceof ConcAddr && y instanceof ConcAddr)
+    if (x instanceof ConcAddr)
     {
-      return new ConcValue(x.addr === y.addr);  
+      if (y instanceof ConcAddr)
+      {
+        return new ConcValue(x.addr.equals(y.addr));        
+      }
+      return new ConcValue(false);
     }
-    return new ConcValue(x.value === y.value);
+    if (y instanceof ConcAddr)
+    {
+      return new ConcValue(false);
+    }
+    return new ConcValue(x.value == y.value);
   }
 
 ConcLattice.prototype.eq =
   function (x, y)
   {
+    if (x instanceof ConcAddr)
+    {
+      if (y instanceof ConcAddr)
+      {
+        return new ConcValue(x.addr.equals(y.addr));        
+      }
+      return new ConcValue(false);
+    }
+    if (y instanceof ConcAddr)
+    {
+      return new ConcValue(false);
+    }
     return new ConcValue(x.value == y.value);
   }
 
 ConcLattice.prototype.neq =
   function (x, y)
   {
+    if (x instanceof ConcAddr)
+    {
+      if (y instanceof ConcAddr)
+      {
+        return new ConcValue(!(x.addr.equals(y.addr)));        
+      }
+      return new ConcValue(true);
+    }
+    if (y instanceof ConcAddr)
+    {
+      return new ConcValue(true);
+    }
     return new ConcValue(x.value != y.value);
+  }
+
+ConcLattice.prototype.neqq =
+  function (x, y)
+  {
+    if (x instanceof ConcAddr)
+    {
+      if (y instanceof ConcAddr)
+      {
+        return new ConcValue(x.addr !== y.addr);        
+      }
+      return new ConcValue(true);
+    }
+    if (y instanceof ConcAddr)
+    {
+      return new ConcValue(true);
+    }
+    return new ConcValue(x.value !== y.value);
   }
 
 ConcLattice.prototype.binor =
@@ -318,6 +404,18 @@ ConcLattice.prototype.shr =
     return new ConcValue(x.value >> y.value);
   }
 
+ConcLattice.prototype.shrr =
+  function (x, y)
+  {
+    return new ConcValue(x.value >>> y.value);
+  }
+
+ConcLattice.prototype.rem =
+  function (x, y)
+  {
+    return new ConcValue(x.value % y.value);
+  }
+
 ConcLattice.prototype.binnot =
   function (x)
   {
@@ -335,3 +433,34 @@ ConcLattice.prototype.sqrt =
   {
     return new ConcValue(Math.sqrt(x.value));
   }
+
+ConcLattice.prototype.abs =
+  function (x)
+  {
+    return new ConcValue(Math.abs(x.value));
+  }
+
+ConcLattice.prototype.round =
+  function (x)
+  {
+    return new ConcValue(Math.round(x.value));
+  }
+
+ConcLattice.prototype.sin =
+  function (x)
+  {
+    return new ConcValue(Math.sin(x.value));
+  }
+
+ConcLattice.prototype.cos =
+  function (x)
+  {
+    return new ConcValue(Math.cos(x.value));
+  }
+
+ConcLattice.prototype.not =
+  function (x)
+  {
+    return new ConcValue(!x.value);
+  }
+

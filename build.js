@@ -12,7 +12,8 @@ Array.prototype.toString =
       return "[]";
     }
     var s = "[";
-    for (var i = 0; i < this.length - 1; i++)
+    var i = 0;
+    for (; i < this.length - 1; i++)
     {
       s += this[i] + ","; 
     }
@@ -20,8 +21,6 @@ Array.prototype.toString =
     return s;   
   }
 
-function b()
-{
   load("common.js");
   load("countingStore.js");
   load("agc.js");
@@ -40,6 +39,3 @@ function b()
   load("test/objectTests.js");  
   load("test/concreteTests.js");
   load("test/jipdaTests.js");
-}
-
-b();

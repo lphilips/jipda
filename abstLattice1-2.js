@@ -168,6 +168,46 @@ Some.prototype.toString =
     return String(this.prim);
   }
 
+Some.prototype.projectString =
+  function ()
+  {
+    if (typeof this.prim === "string")
+    {
+      return this;
+    }
+    return BOT;
+  }
+
+Some.prototype.charAt =
+  function (x)
+  {
+    return new JipdaValue(JipdaValue.STR | JipdaValue.NUMSTR, JipdaValue.EMPTY_SET);
+  }
+
+Some.prototype.charCodeAt =
+  function (x)
+  {
+    return JipdaValue._NUM;
+  }
+
+Some.prototype.startsWith =
+  function (x)
+  {
+    return JipdaValue._BOOL;
+  }
+
+Some.prototype.stringLength =
+  function (x)
+  {
+    return new Some(this.prim.length);
+  }
+
+Some.prototype.parseInt =
+  function ()
+  {
+    return new Some(parseInt(this.prim, 0));
+  }
+
 function JipdaValue(type, as)
 {
   this.type = type;
@@ -338,6 +378,50 @@ JipdaValue.prototype.projectRef =
     return BOT;
   }
 
+JipdaValue.prototype.projectString =
+  function ()
+  {
+    var type = this.type & JipdaValue.STRINGMASK; 
+    if (type)
+    {
+      return new JipdaValue(type, JipdaValue.EMPTY_SET);
+    }
+    return BOT;
+  }
+
+JipdaValue.prototype.charAt =
+  function (x)
+  {
+    return new JipdaValue(JipdaValue.STR | JipdaValue.NUMSTR, JipdaValue.EMPTY_SET);
+  }
+
+JipdaValue.prototype.charCodeAt =
+  function (x)
+  {
+    return JipdaValue._NUM;
+  }
+
+JipdaValue.prototype.stringLength =
+  function (x)
+  {
+    return JipdaValue._NUMSTR;
+  }
+
+JipdaValue.prototype.startsWith =
+  function (x)
+  {
+    return JipdaValue._BOOL;
+  }
+
+JipdaValue.prototype.parseInt =
+  function ()
+  {
+    return JipdaValue._NUM; 
+  }
+
+
+
+
 function JipdaLattice()
 {
 }
@@ -378,7 +462,7 @@ JipdaLattice.prototype.abst1 =
     {
       return JipdaValue._NULL;
     }
-    throw new Error("cannot abstract value " + prim);
+    throw new Error("cannot abstract value " + value);
   }
 
 JipdaLattice.prototype.NUMBER = JipdaValue._NUM;
@@ -390,7 +474,12 @@ JipdaLattice.prototype.add =
   {
     if (x instanceof Some && y instanceof Some)
     {
-      return new Some(x.prim + y.prim);
+      var result = x.prim + y.prim;
+      if (typeof result === "string" && result.length > 32)
+      {
+        return JipdaValue._STR;
+      }
+      return new Some(result);
     }
     var x = x.abst();
     var y = y.abst();
@@ -468,6 +557,12 @@ JipdaLattice.prototype.div =
     return this.NUMBER;
   }
 
+JipdaLattice.prototype.rem =
+  function (x, y)
+  {
+    return this.NUMBER;
+  }
+
 JipdaLattice.prototype.eqq =
   function (x, y)
   {
@@ -516,6 +611,12 @@ JipdaLattice.prototype.shr =
     return this.NUMBER;
   }
 
+JipdaLattice.prototype.shrr =
+  function (x, y)
+  {
+    return this.NUMBER;
+  }
+
 JipdaLattice.prototype.not =
   function (x)
   {
@@ -535,6 +636,30 @@ JipdaLattice.prototype.binnot =
   }
 
 JipdaLattice.prototype.sqrt =
+  function (x)
+  {
+    return this.NUMBER;
+  }
+
+JipdaLattice.prototype.sin =
+  function (x)
+  {
+    return this.NUMBER;
+  }
+
+JipdaLattice.prototype.cos =
+  function (x)
+  {
+    return this.NUMBER;
+  }
+
+JipdaLattice.prototype.abs =
+  function (x)
+  {
+    return this.NUMBER;
+  }
+
+JipdaLattice.prototype.round =
   function (x)
   {
     return this.NUMBER;

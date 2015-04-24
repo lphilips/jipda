@@ -190,7 +190,8 @@ Ast.isVariableDeclarator =
     return n.type === "FunctionExpression";
   }
   
-  function isNewExpression(n)
+Ast.isNewExpression =
+  function (n)
   {
     return n.type === "NewExpression";
   }
@@ -463,13 +464,12 @@ Ast.augmentAst =
 Ast.createAst =
   function (source, config)
   {
-    
-    var ast = esprima.parse(source, {loc: (config ? config.loc : false), owningComments : true, comment : true, tokens: true, range : true});
-    if (config && config.resetTagCounter)
+    config = config || {loc:true, keepTagCounter:false};
+    var ast = esprima.parse(source, {loc:config.loc});
+    if (!config.keepTagCounter)
     {
       __nodeCounter__ = 0;
     }
-//    tagAst(ast);
     Ast.augmentAst(ast);
     return ast;
   }
@@ -557,6 +557,7 @@ Ast.createAst =
     {
       return ast;
     }
+    var p;
     for (var i = 0; i < cs.length; i++)
     {
       if (p = parent(node, cs[i]))
@@ -725,7 +726,7 @@ Ast.functionScopeDeclarations =
     return result;
   }
 
-Ast.enclosingScope =
+Ast.enclosingFunScope =
   function (node, ast)
   {
     var p = parent(node, ast);
@@ -753,16 +754,16 @@ Ast.findDeclarationNode =
   function (nameNode, ast)
   {
     var name = nameNode.name;
-    var enclosingScope = Ast.enclosingScope(nameNode, ast);
-    while (enclosingScope)
+    var enclosingFunScope = Ast.enclosingFunScope(nameNode, ast);
+    while (enclosingFunScope)
     {
-      var varScope = Ast.functionScopeDeclarations(enclosingScope);
+      var varScope = Ast.functionScopeDeclarations(enclosingFunScope);
       var node = varScope[name];
       if (node)
       {
         return node;
       }
-      enclosingScope = Ast.enclosingScope(enclosingScope, ast);
+      enclosingFunScope = Ast.enclosingFunScope(enclosingFunScope, ast);
     }
     return false;
   }
