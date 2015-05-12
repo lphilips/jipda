@@ -153,7 +153,7 @@ Pdg.functionsCalled =
   }
 
 Pdg.isConstructor =
-  function (funNode)
+  function (funNode, ast)
   {
     if (funNode._isConstructor === undefined)
     {

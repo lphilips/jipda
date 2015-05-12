@@ -9,7 +9,7 @@ var Ast = {}
     switch (node.type)
     {
       case "Literal":
-        return ""+node.value;
+        return String(node.value);
       case "Identifier": 
         return node.name;
       case "BinaryExpression": 
@@ -465,7 +465,7 @@ Ast.createAst =
   function (source, config)
   {
     config = config || {loc:true, keepTagCounter:false};
-    var ast = esprima.parse(source, {loc:config.loc});
+    var ast = esprima.parse(source, {loc: (config ? config.loc : false), owningComments : true, comment : true, tokens: true, range : true});
     if (!config.keepTagCounter)
     {
       __nodeCounter__ = 0;
@@ -549,7 +549,7 @@ Ast.createAst =
   }
   
   // createFromChildren
-  Ast.parent = parent;
+  
   function parent(node, ast)
   {
     var cs = Ast.children(ast);
@@ -567,7 +567,8 @@ Ast.createAst =
     }
     return false;
   }
-  
+  Ast.parent = parent;
+
   function isDeclarationIdentifier(n, ast)
   {
     if (Ast.isIdentifier(n))
