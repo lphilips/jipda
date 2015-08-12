@@ -8,19 +8,19 @@ var tagAg = {};
   tagAg.object =
     function (node, time)
     {
-      return node.tag + 1024;
+      return "obj-" + node.tag;
     }
 
   tagAg.closure =
     function (node, benva, store, kont, c)
     {
-      return node.tag + 1024;
+      return "clo-" + node.tag;
     }
 
   tagAg.closureProtoObject =
     function (node, benva, store, kont, c)
     {
-      return node.tag + 1024;
+      return "proto-" + node.tag;
     }
 
   tagAg.array =
@@ -28,27 +28,27 @@ var tagAg = {};
     {
       if (node.type === "NewExpression")
       {
-        return 20024;
+        return "arr";
       }
-      return node.tag;
+      return "arr-" + node.tag;
     }
 
   tagAg.string =
     function (node, time)
     {
-      return node.tag + 1024;
+      return "str-" + node.tag;
     }
 
   tagAg.constructor =
-    function (node, time)
+    function (node, application)
     {
-      return node.tag + 10024;
+      return "ctr-" + node.tag;
     }
   
   tagAg.vr =
     function (node, ctx)
     {
-      return node.tag + 1024;
+      return "var-" + node.tag;
     }
   
   return tagAg;

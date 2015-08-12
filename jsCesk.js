@@ -1,14 +1,18 @@
 "use strict";
 
-
-var EMPTY_KONT = {equals:function (x) {return x === EMPTY_KONT}, hashCode:function () {return 0}, toString:function () {return "@---"}};
 var EMPTY_LKONT = [];
 var EMPTY_ADDRESS_SET = ArraySet.empty();
+
+var ast0src = "";
+ast0src += "Array.prototype.map = function (f) { var result = [];for (var i = 0; i < this.length; i++){result.push(f(this[i]))}; return result}\n";
+ast0src += "Array.prototype.filter = function (f) { var result = [];for (var i = 0; i < this.length; i++){var x = this[i]; if (f(x)) (result.push(x))}; return result}\n";
+ast0src += "Array.prototype.indexOf = function (x) { for (var i = 0; i < this.length; i++){if (this[i]===x) return i}; return -1}\n";
+const ast0 = Ast.createAst(ast0src);
 
 function jsCesk(cc)
 {
   // address generator
-  const a = cc.a;
+  var a = cc.a;
   // lattice
   const l = cc.l || new JipdaLattice();
   // atomic evaluation
@@ -135,7 +139,7 @@ function jsCesk(cc)
       }
       var prime = 31;
       var result = 1;
-      result = prime * result + this.ex.hashCode();
+      result = prime * result + (this.ex && this.ex.hashCode());
       result = prime * result + this.callable.hashCode();
       result = prime * result + this.args.hashCode();
       result = prime * result + this.thisa.hashCode();
@@ -153,7 +157,7 @@ function jsCesk(cc)
   
   function stackAddresses(lkont, kont)
   {
-    var addresses = (kont === EMPTY_KONT ? EMPTY_ADDRESS_SET : kont.as)
+    var addresses = kont.as.add(kont.thisa);
     for (var i = 0; i < lkont.length; i++)
     {
       var frame = lkont[i];
@@ -170,19 +174,19 @@ function jsCesk(cc)
   
   function storeAlloc(store, addr, value)
   {
-    assert(addr>>>0===addr);
+    //assert(addr>>>0===addr);
     return store.allocAval(addr, value);
   }
   
   function storeUpdate(store, addr, value)
   {
-    assert(addr>>>0===addr);
+    //assert(addr>>>0===addr);
     return store.updateAval(addr, value);
   }
   
   function storeLookup(store, addr)
   {
-    assert(addr>>>0===addr);
+    //assert(addr>>>0===addr);
     return store.lookupAval(addr);
   }
   
@@ -352,7 +356,6 @@ function jsCesk(cc)
   arrayP = registerPrimitiveFunction(arrayP, arrayPa, "push", arrayPush);
 //  arrayP = registerPrimitiveFunction(arrayP, arrayPa, "map", arrayMap);
 //  arrayP = registerPrimitiveFunction(arrayP, arrayPa, "reduce", arrayReduce);
-//  arrayP = registerPrimitiveFunction(arrayP, arrayPa, "filter", arrayFilter);
   store = storeAlloc(store, arrayPa, arrayP);
   // END ARRAY
   
@@ -392,7 +395,6 @@ function jsCesk(cc)
   // END PERFORMANCE
   
   // BEGIN GLOBAL
-  globalEnv = globalEnv.add("this", globalRef); // global "this" address
   // ECMA 15.1.1 value properties of the global object (no "null", ...)
   global = registerProperty(global, "undefined", L_UNDEFINED);
   global = registerProperty(global, "NaN", l.abst1(NaN));
@@ -405,8 +407,7 @@ function jsCesk(cc)
   global = registerPrimitiveFunction(global, globala, "print", _print);
   // end specific interpreter functions
   
-//  store = storeAlloc(store, globalenva, globalEnv);
-  store = storeAlloc(store, globala, global);
+  store = storeAlloc(store, globala, global);  
   // END GLOBAL
   
   // BEGIN PRIMITIVES
@@ -769,56 +770,52 @@ function jsCesk(cc)
       result = prime * result + this.scope.hashCode();
       return result;      
     }
-
-  ObjClosureCall.prototype.applyFunction =
-    function (application, operandValues, thisa, benv, store, lkont, kont, effects)
-    {
-    var funNode = this.node;
-    var bodyNode = funNode.body;
-    
-    var stackAs = stackAddresses(lkont, kont);
-    if (Ast.isNewExpression(application))
-    {
-      // we still might want to return 'this'
-      stackAs = stackAs.add(thisa);
-    }
-    var stack = [lkont, kont];
-    var ctx0 = new Context(application, this, operandValues, thisa, store, stackAs);
+  
+  function createContext(application, callable, operandValues, thisa, store, stackAs, previousStack)
+  {
+    var ctx0 = new Context(application, callable, operandValues, thisa, store, stackAs);
     var ctx = contexts.get(ctx0);
     if (!ctx)
     {
       ctx = ctx0;
       ctx._id = contexts.count();
       ctx._stacks = new MutableHashSet(7);
-      ctx._stacks.add(stack);
+      if (previousStack) // TODO no underlying stacks should signal root context, iso ctx.ex === null
+      {
+        ctx._stacks.add(previousStack);        
+      }
       contexts.add(ctx);
       
       // sstorei++; don't increase age for fresh stack: no need to revisit states
     }
-    else
+    else if (previousStack) // TODO no underlying stacks should signal root context, iso ctx.ex === null
     {
-      if (ctx._stacks.contains(stack))
+      if (ctx._stacks.contains(previousStack))
       {
       }
       else
       {
-        ctx._stacks.add(stack);
+        ctx._stacks.add(previousStack);
 //        sstorei++;
         if (ctx._poppers)
         {
-          popTodo.push([ctx._poppers, stack]);
+          popTodo.push([ctx._poppers, previousStack]);
         }
       }
     }
-
+    return ctx; 
+  }
+  
+  function performApply(operandValues, funNode, scope, store, lkont, kont, ctx, effects)
+  {    
+    var bodyNode = funNode.body;
     var nodes = bodyNode.body;    
     if (nodes.length === 0)
     {
       return [{state:new KontState(L_UNDEFINED, store, [], ctx), effects:effects}];
     }
     
-    var extendedBenv = this.scope.extend();
-    extendedBenv = extendedBenv.add("this", thisa);
+    var extendedBenv = scope.extend();
     
     var funScopeDecls = functionScopeDeclarations(funNode);
     var names = Object.keys(funScopeDecls);
@@ -838,7 +835,7 @@ function jsCesk(cc)
             var addr = na[1];
             if (Ast.isIdentifier(node)) // param
             {
-              store = storeAlloc(store, addr, operandValues[node.i]);
+              store = storeAlloc(store, addr, node.i < operandValues.length ? operandValues[node.i] : L_UNDEFINED);
             }
             else if (Ast.isFunctionDeclaration(node))
             {
@@ -857,18 +854,31 @@ function jsCesk(cc)
             }
           });
     }
-    
     return [{state:new EvalState(bodyNode, extendedBenv, store, [], ctx), effects:effects}];
+  }
+  
+
+  ObjClosureCall.prototype.applyFunction =
+    function (application, operandValues, thisa, benv, store, lkont, kont, effects)
+    {    
+    var stackAs = stackAddresses(lkont, kont);
+    var previousStack = [lkont, kont];
+    var ctx = createContext(application, this, operandValues, thisa, store, stackAs, previousStack);
+    return performApply(operandValues, this.node, this.scope, store, lkont, kont, ctx, effects)
   }
   
   ObjClosureCall.prototype.applyConstructor =
     function (application, operandValues, protoRef, benv, store, lkont, kont, effects)
     {    
+      var stackAs = stackAddresses(lkont, kont);
+      var previousStack = [lkont, kont];
       var funNode = this.node;
+      var thisa = a.constructor(funNode, application);
+      // call store should not contain freshly allocated `this`
+      var ctx = createContext(application, this, operandValues, thisa, store, stackAs, previousStack);
       var obj = createObject(protoRef);
-      var thisa = a.constructor(funNode); /// TODO: funNode and funNode.body already in use as address
-      store = storeAlloc(store, thisa, obj);
-      return this.applyFunction(application, operandValues, thisa, benv, store, lkont, kont, effects);
+      store = store.allocAval(thisa, obj);
+      return performApply(operandValues, this.node, this.scope, store, lkont, kont, ctx, effects);
     }
 
   ObjClosureCall.prototype.addresses =
@@ -998,7 +1008,7 @@ function jsCesk(cc)
       
       if (lkont.length === 0) 
       {
-        if (kont === EMPTY_KONT)
+        if (kont.ex === null)
         {
           return [];
         }
@@ -1084,7 +1094,7 @@ function jsCesk(cc)
     function ()
     {
       var kont = this.kont;
-      if (kont === EMPTY_KONT)
+      if (kont.ex === null)
       {
         throw new Error("return outside function");
       }
@@ -1226,7 +1236,7 @@ function jsCesk(cc)
           continue todo;
         }
       }
-      if (kont === EMPTY_KONT || G.contains(kont))
+      if (kont.ex === null || G.contains(kont))
       {
         // TODO  if kont === EMPTY_KONT then unhandled exception
         continue;
@@ -3397,7 +3407,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
       var obj = storeLookup(store, globala);
       var aname = l.abst1(name);
       obj = obj.add(aname, value);
-      effects.push(writeObjectEffect(globala, aname))
+      effects.push(writeObjectEffect(globala, aname));
       store = storeUpdate(store, globala, obj);      
     }
     else
@@ -3464,17 +3474,17 @@ function applyBinaryOperator(operator, leftValue, rightValue)
   }
   
   AtomicEvaluator.prototype.evalNode =
-    function (node, benv, store)
+    function (node, benv, store, ctx)
     {
       switch (node.type)
       {
-        case "ExpressionStatement": return this.evalNode(node.expression, benv, store);
+        case "ExpressionStatement": return this.evalNode(node.expression, benv, store, ctx);
         case "Literal": return l.abst1(node.value);
-        case "Identifier": return this.evalIdentifier(node, benv, store);
-        case "ThisExpression": return this.evalThisExpression(node, benv, store);
+        case "Identifier": return this.evalIdentifier(node, benv, store, ctx);
+        case "ThisExpression": return this.evalThisExpression(node, benv, store, ctx);
         case "FunctionDeclaration": return L_UNDEFINED;
-        case "BinaryExpression": return this.evalBinaryExpression(node, benv, store);
-        case "MemberExpression": return this.evalMemberExpression(node, benv, store);
+        case "BinaryExpression": return this.evalBinaryExpression(node, benv, store, ctx);
+        case "MemberExpression": return this.evalMemberExpression(node, benv, store, ctx);
         default: throw new Error("cannot atomically evaluate " + node + " (" + node.type + ")");
       }
     }
@@ -3500,7 +3510,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
 //    }
   
    AtomicEvaluator.prototype.evalIdentifier =
-     function (node, benv, store)
+     function (node, benv, store, ctx)
     {
       var effects = this.effects;
       var value = doScopeLookup(node, benv, store, effects);
@@ -3508,32 +3518,32 @@ function applyBinaryOperator(operator, leftValue, rightValue)
     }
    
    AtomicEvaluator.prototype.evalThisExpression =
-     function (node, benv, store)
+     function (node, benv, store, ctx)
     {
-       return l.abstRef(benv.lookup("this"));
+       return l.abstRef(ctx.thisa);
     }
 
    AtomicEvaluator.prototype.evalBinaryExpression =
-     function (node, benv, store)
+     function (node, benv, store, ctx)
      {
-       var leftValue = this.evalNode(node.left, benv, store);
-       var rightValue = this.evalNode(node.right, benv, store);
+       var leftValue = this.evalNode(node.left, benv, store, ctx);
+       var rightValue = this.evalNode(node.right, benv, store, ctx);
        var operator = node.operator;
        return applyBinaryOperator(operator, leftValue, rightValue);
      }
    
    AtomicEvaluator.prototype.evalMemberExpression =
-     function (node, benv, store)
+     function (node, benv, store, ctx)
      {
        var effects = this.effects;
-       var objectValue = this.evalNode(node.object, benv, store);
-       var objectRefStore = ToObject(node, objectValue, store);
+       var objectValue = this.evalNode(node.object, benv, store, ctx);
+       var objectRefStore = ToObject(node, objectValue, store, ctx);
        var objectRef = objectRefStore[0];
        store = objectRefStore[1];
        var nameValue;
        if (node.computed)
        {
-         var propertyValue = this.evalNode(node.property, benv, store);
+         var propertyValue = this.evalNode(node.property, benv, store, ctx);
          if (propertyValue === BOT)
          {
            return BOT;
@@ -3567,7 +3577,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
 
   function evalThisExpression(node, benv, store, lkont, kont, effects)
   {
-    var value = l.abstRef(benv.lookup("this"));
+    var value = l.abstRef(kont.thisa);
     return [{state:new KontState(value, store, lkont, kont), effects:effects}];
   }
   
@@ -3648,7 +3658,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
     if (isAtomic(init))
     {
       var ae = new AtomicEvaluator(effects);
-      var value = ae.evalNode(init, benv, store);
+      var value = ae.evalNode(init, benv, store, kont);
       var id = node.id;
       store = doScopeSet(id, value, benv, store, effects);      
       return [{state:new KontState(L_UNDEFINED, store, lkont, kont), effects:effects}];
@@ -3751,7 +3761,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
     var closurea = a.closure(node, benv, store, lkont, kont);
   
     var prototype = createObject(objectProtoRef);
-    var prototypea = a.closureProtoObject(node.body, benv, store, lkont, kont);
+    var prototypea = a.closureProtoObject(node, benv, store, lkont, kont);
     var closureRef = l.abstRef(closurea);
     prototype = prototype.add(P_CONSTRUCTOR, closureRef);
     store = storeAlloc(store, prototypea, prototype);
@@ -3785,7 +3795,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
       if (isAtomic(object))
       {
         var ae = new AtomicEvaluator(effects);
-        var objectValue = ae.evalNode(object, benv, store);
+        var objectValue = ae.evalNode(object, benv, store, kont);
         var property = node.callee.property;
         if (node.computed)
         {
@@ -3807,7 +3817,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
             var operandsValues = [];
             while (i < operands.length && isAtomic(operands[i]))
             {
-              operandsValues[i] = ae.evalNode(operands[i], benv, store);
+              operandsValues[i] = ae.evalNode(operands[i], benv, store, kont);
               i++;
             }
             if (i === operands.length)
@@ -3830,14 +3840,14 @@ function applyBinaryOperator(operator, leftValue, rightValue)
     if (isAtomic(calleeNode))
     {
       var ae = new AtomicEvaluator(effects);
-      var operatorValue = ae.evalNode(calleeNode, benv, store);
+      var operatorValue = ae.evalNode(calleeNode, benv, store, kont);
       var operands = node.arguments;
       
       var i = 0;
       var operandsValues = [];
       while (i < operands.length && isAtomic(operands[i]))
       {
-        operandsValues[i] = ae.evalNode(operands[i], benv, store);
+        operandsValues[i] = ae.evalNode(operands[i], benv, store, kont);
         i++;
       }
       if (i === operands.length)
@@ -3910,7 +3920,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
     if (isAtomic(argumentNode))
     {
       var ae = new AtomicEvaluator(effects);
-      var value = ae.evalNode(argumentNode, benv, store);
+      var value = ae.evalNode(argumentNode, benv, store, kont);
       return [{state:new ReturnState(value, store, lkont, kont), effects:effects}];
     }
     
@@ -3937,7 +3947,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
     if (isAtomic(argumentNode))
     {
       var ae = new AtomicEvaluator(effects);
-      var value = ae.evalNode(argumentNode, benv, store);
+      var value = ae.evalNode(argumentNode, benv, store, kont);
       return [{state:new ThrowState(value, store, lkont, kont), effects:effects}];
     }
     
@@ -4031,7 +4041,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
     if (isAtomic(node))
     {
       var ae = new AtomicEvaluator(effects);
-      var value = ae.evalNode(node, benv, store);
+      var value = ae.evalNode(node, benv, store, kont);
       return [{state:new KontState(value, store, lkont, kont), effects:effects}];
     }
     return evalNonAtomic(node, benv, store, lkont, kont, effects);
@@ -4112,7 +4122,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
 
   var module = {};
   module.l = l;
-  module.store = store;
+  //module.store = store;
   module.globala = globala;
   
   module.inject = 
@@ -4120,18 +4130,19 @@ function applyBinaryOperator(operator, leftValue, rightValue)
     {
       override = override || {};
       var haltFrame = new HaltKont([globala]);
-      var globalEnv = Benv.empty().add("this", globala);
-      return new EvalState(node, override.benv || globalEnv, override.store || store, [haltFrame], EMPTY_KONT);    
+      var globalEnv = Benv.empty();
+      var globalContext = createContext(null, node, [], globala, store, EMPTY_ADDRESS_SET, null);
+      return new EvalState(node, override.benv || globalEnv, override.store || store, [haltFrame], globalContext);    
     }
   
   
   module.explore =
-    function (ast)
+    function (ast, override)
     {
       var startTime = performance.now();
       var id = 0;
       var visited = MutableHashSet.empty(104729);
-      var initial = this.inject(ast);
+      var initial = this.inject(ast, override);
       initial._id = id++;
       visited.add(initial);
       var result = ArraySet.empty();
@@ -4287,16 +4298,101 @@ function applyBinaryOperator(operator, leftValue, rightValue)
       }
     }
   
+  function preludeExplore(ast)
+    {
+      var startTime = performance.now();
+      var oldA = a;
+      a = {};
+      a.object =
+        function (node, benva, store, kont)
+        {
+        return allocNative();
+        }
+
+      a.closure =
+        function (node, benva, store, kont)
+        {
+        return allocNative();
+        }
+
+      a.closureProtoObject =
+        function (node, benva, store, kont)
+        {
+        return allocNative();
+        }
+
+      a.array =
+        function (node, benva, store, kont)
+        {
+        return allocNative();
+        }
+
+      a.string =
+        function (node, benva, store, kont)
+        {
+        return allocNative();
+        }
+
+      a.benv =
+        function (node, benva, store, kont)
+        {
+        return allocNative();
+        }
+
+      a.constructor =
+        function (node, benva, store, kont)
+        {
+        return allocNative();
+        }
+      
+      a.vr =
+        function (name, ctx)
+        {
+        return allocNative();
+        }
+
+      var initial = module.inject(ast);
+      var s = initial;
+      var id = 0;
+      while (true)
+      {
+        var next = s.next();
+        id++;
+        if (id % 10000 === 0)
+        {
+          print(Formatter.displayTime(performance.now()-startTime), "states", id, "ctxs", sstore.count(), "sstorei", sstorei);
+        }
+        var l = next.length;
+        if (l === 1)
+        {
+          s = next[0].state;
+        }
+        else if (l === 0)
+        {
+          print("loaded prelude", Formatter.displayTime(performance.now()-startTime), "states", id);
+          a = oldA;
+          store = s.store;
+          return;
+        }
+        else
+        { 
+          a = oldA;
+          throw new Error("more than one next state");
+        }
+      }
+    }
+  module.preludeExplore = preludeExplore;
   
   module.isAtomic = isAtomic;
   module.evalAtomic =
-    function (atom, benv, store)
+    function (atom, benv, store, kont)
     {
       var ae = new AtomicEvaluator([]);
-      var value = ae.evalNode(atom, benv, store);
+      var value = ae.evalNode(atom, benv, store, kont);
       return value;
     }
       
+  preludeExplore(ast0);    
   return module; 
 }
 
@@ -4345,7 +4441,7 @@ function applyBinaryOperator(operator, leftValue, rightValue)
 
 function isResultState(state)
 {
-  return state.value && state.lkont.length === 0 && state.kont === EMPTY_KONT; 
+  return state.value && state.lkont.length === 0 && state.kont.ex === null; 
 }
 
 function retrieveEndStates(initial) // not used for the moment

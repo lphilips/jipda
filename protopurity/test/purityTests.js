@@ -4,10 +4,9 @@ var suiteJipdaDepTests =
 {
   var module = new TestSuite("suiteJipdaDepTests");
 
-  function createCesk(cc)
+  function createCesk(ast)
   {
-    cc = cc || {};
-    return jsCesk({a:cc.a || createTagAg(), l:new JipdaLattice()});
+    return jsCesk({a:createTagAg(), l:new JipdaLattice()});
   }
   
   var PURE="PURE", OBS="OBS", PROC="PROC";
@@ -16,7 +15,7 @@ var suiteJipdaDepTests =
   function test(src, checks)
   {
     var ast = Ast.createAst(src);
-    var cesk = createCesk();
+    var cesk = createCesk(ast);
     var result = cesk.explore(ast);
     var pmap = computePurity(ast, result.initial, result.sstore);
     for (var i = 0; i < checks.length; i+=2)
@@ -57,12 +56,12 @@ var suiteJipdaDepTests =
       test(src, ["f", PURE]);
     }
     
-//  module.testPurity4v =
-//    function ()
-//    {
-//      var src = "while (true) {var z=false; function f() {return z}; f()}";
-//      test(src, ["f", PURE]);
-//    }
+  module.testPurity4v =
+    function ()
+    {
+      var src = "while (true) {var z=false; function f() {return z}; f()}";
+      test(src, ["f", PURE]);
+    }
     
   module.testPurity5a = 
     function ()
@@ -134,6 +133,13 @@ var suiteJipdaDepTests =
       test(src, ["f", PROC]);
     }
     
+  module.testPurity6c =
+    function ()
+    {
+      var src = "function f(){var z=false; function g(){h()}; function h(){z=true}; g()};f()";
+      test(src, ["f", PURE, "g", PROC, "h", PROC]);
+    }
+    
   module.testPurity7 =
     function ()
     {
@@ -180,7 +186,7 @@ var suiteJipdaDepTests =
     function ()
     {
       var src = "function f(){var o={}; function g() {o.x=4}; g(); return o.x}; f()";
-      test(src, ["f", PURE]);
+      test(src, ["f", PURE, "g", PROC]);
     }
     
   module.testPurity11b =
@@ -243,14 +249,14 @@ var suiteJipdaDepTests =
     function ()
     {
       var src = "function g() {var o={x:{}}; return o}; function f(){return g().x}; while (true) f();";
-      test(src, ["f", PURE]);
+      test(src, ["f", PURE, "g", PURE]);
     }
     
   module.testPurity18 =
     function ()
     {
       var src = "function g(p) {p.x=4}; function f(){var o={}; g(o); return o.x}; f()";
-      test(src, ["f", PURE]);
+      test(src, ["f", PURE, "g", PROC]);
     }
     
   module.testPurity18b =
@@ -540,6 +546,127 @@ var suiteJipdaDepTests =
     test(src, ["f", PURE]);
   }  
   
+  module.testPurity45 =
+    function ()
+    {
+      var src = "function F(x){this.x=x};new F(123);";
+      test(src, ["F", PURE]);
+    }
+  
+  module.testPurity46 =
+    function ()
+    {
+      var src = "var o={}; function f(){function g() {o.x=4}; g(); return o.x}; f()";
+      test(src, ["f", PROC, "g", PROC]);
+    }
+  
+  module.testPurity47 =
+    function ()
+    {
+      var src = "function f(){var o={}; o.g=function g(){this.x=4}; o.g()}; f()";
+      test(src, ["f", PURE, "g", PROC]);
+    }
+  
+  module.testPurity48 =
+    function ()
+    {
+      var src = "function f(){var o={}; function g(p){p.x=4}; g(o)}; f()";
+      test(src, ["f", PURE, "g", PROC]);
+    }
+  
+  module.testPurity49 =
+    function ()
+    {
+      var src = "function f(){var o={};function g(p){h(p)};function h(q){q.x=4};g(o)};f()";
+      test(src, ["f", PURE, "g", PROC, "h", PROC]);
+    }
+  
+  module.testPurity50 =
+    function ()
+    {
+      var src = "function f(){var o=g();o.x=4;function g(){return {}}};f()";
+      test(src, ["f", PURE, "g", PURE]);
+    }
+  
+  module.testPurity51 =
+    function ()
+    {
+      var src = "function f(p){if (p) {p.x=4} else {p={}};return p};var o=f();f(o)";
+      test(src, ["f", PROC]);
+    }
+  
+  module.testPurity51b =
+    function ()
+    {
+      var src = "function f(p){var a=p;if (p) {a.x=4} else {p={}};return p};var o=f();f(o)";
+      test(src, ["f", PROC]);
+    }
+  
+  module.testPurity52 =
+    function ()
+    {
+      var src = "function f(){var x=10;function g(){return x};x;g();x=11;g()};f()";
+      test(src, ["f", PURE, "g", OBS]);
+    }
+  
+  module.testPurity52o =
+    function ()
+    {
+      var src = "function f(){var o={x:10};function g(){return o.x};o.x;g();o.x=11;g()};f()";
+      test(src, ["f", PURE, "g", OBS]);
+    }
+  
+  module.testPurity53 =
+    function ()
+    {
+      var src = "function glob(){var z=false;function h(){z=true};function g(){h()};function f(){g()};f()};glob()";
+      test(src, ["f", PROC, "g", PROC, "h", PROC, "glob", PURE]);
+    }
+  
+  module.testPurity54 =
+    function ()
+    {
+      var src = "function f() {var z={}; z.x=true; f()};f()"
+      test(src, ["f", PURE]);
+    }
+  
+  module.testPurity54b =
+    function ()
+    {
+      var src = "var z={};function f() {var y={}; y.x=true; y=z; y.x=false; f()};f()"
+      test(src, ["f", PROC]);
+    }
+  
+  module.testPurity54c =
+    function ()
+    {
+      var src = "var z={};function f() {var y={}; y.x=true; var y=z; y.x=false; f()};f()"
+      test(src, ["f", PROC]);
+    }
+  
+  module.testPurity55 =
+    function ()
+    {
+      var src = "var z={};function f() {var y=z; y={}; y.x=false; f()};f()"
+      test(src, ["f", PURE]);
+    }
+    
+
+  
+  module.testTreenode1 =
+    function ()
+    {
+      var src = read("test/resources/treenode1.js");
+      test(src, ["TreeNode", PURE, "f", PURE]);
+    }
+  
+  module.testTreenode =
+    function ()
+    {
+      var src = read("test/resources/treenode.js");
+      test(src, ["TreeNode", PURE, "f", PURE]);
+    }
+
   
   return module;
 
