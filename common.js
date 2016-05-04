@@ -2386,3 +2386,18 @@ Formatter.displayWidth =
   {
     return (s+"                                          ").substring(0,w);
   }
+
+  if (typeof module !== 'undefined' && module.exports != null) {
+    exports.HashMap               = HashMap;
+    exports.ArraySet              = ArraySet;
+    exports.Indexer               = Indexer;
+    exports.MutableHashSet        = MutableHashSet;
+    exports.TrieMap               = TrieMap;
+    exports.HashCode              = HashCode;
+    exports.Formatter             = Formatter;
+
+    exports.assert                = assert;
+    exports.assertDefinedNotNull  = assertDefinedNotNull;
+  }
+
+

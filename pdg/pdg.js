@@ -1,4 +1,4 @@
-"use strict";
+//"use strict"; //Firefox error
 
 var Pdg = {};
 
@@ -257,3 +257,21 @@ Pdg.writeAccess =
       result = [];
     }
   }
+
+
+if (typeof module !== 'undefined' && module.exports != null) {
+        var jsCesk          = require('../jscesk.js').jsCesk;
+        var createTagAg     = require('../tagAg.js').createTagAg;
+        var JipdaLattice    = require('../abstLattice1-2.js').JipdaLattice;
+        var Ast             = require('../ast.js').Ast;
+        var common          = require('../common.js');
+        var HashMap         = common.HashMap;
+        var ArraySet        = common.ArraySet;
+        var Indexer         = common.Indexer;
+        var MutableHashSet  = common.MutableHashSet;
+        var assert                = common.assert;
+        var assertDefinedNotNull  = common.assertDefinedNotNull;
+        
+        exports.Pdg = Pdg;
+}
+

@@ -1,5 +1,21 @@
 "use strict";
 
+if (typeof module !== 'undefined' && module.exports != null) {
+
+      var common          = require('./common.js');
+      var HashMap         = common.HashMap;
+      var ArraySet        = common.ArraySet;
+      var Indexer         = common.Indexer;
+      var MutableHashSet  = common.MutableHashSet;
+      var assert                = common.assert;
+      var assertDefinedNotNull  = common.assertDefinedNotNull;
+      var lattice         = require('./lattice.js');
+      var Ecma            = lattice.Ecma;
+      var BOT             = lattice.BOT;           
+
+}
+
+
 function Obj(Class)
   {
     this.Class = Class;
@@ -312,4 +328,10 @@ Obj.prototype.diff = //DEBUG
       benv.Prototype = FUNCTIONPA;
       benv.Call = ArraySet.from1(Call);
       return benv;
+    }
+
+
+    if (typeof module !== 'undefined' && module.exports != null) {
+
+        exports.Obj  = Obj;
     }

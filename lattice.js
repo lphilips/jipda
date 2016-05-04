@@ -65,3 +65,11 @@ Ecma.Class =
     ERROR: "Error",
     JSON: "JSON"
   };
+
+
+if (typeof module !== 'undefined' && module.exports != null) {
+
+    exports.Ecma = Ecma;
+    exports.BOT  = BOT;
+
+}

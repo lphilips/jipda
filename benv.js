@@ -6,6 +6,19 @@ function Benv(map, global)
   this._global = global;
 }
 
+if (typeof module !== 'undefined' && module.exports != null) {
+
+      var common          = require('./common.js');
+      var HashMap         = common.HashMap;
+      var ArraySet        = common.ArraySet;
+      var Indexer         = common.Indexer;
+      var MutableHashSet  = common.MutableHashSet;
+
+      var lattice         = require('./lattice.js');
+      var Ecma            = lattice.Ecma;
+      var BOT             = lattice.BOT;    
+}
+
 Benv.EMPTY_FRAME = HashMap.empty();
 
 Benv.empty =
@@ -102,4 +115,10 @@ Benv.prototype.narrow =
   function (names)
   {
     return new Benv(this._map.narrow(names), this.global);
+  }
+
+
+  if (typeof module !== 'undefined' && module.exports != null) {
+     
+      exports.Benv = Benv;
   }

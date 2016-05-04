@@ -1,4 +1,4 @@
-"use strict";
+//"use strict"; //Firefox error
 
 function StoreValue(aval, fresh)
 {
@@ -27,7 +27,7 @@ StoreValue.prototype.hashCode =
   function ()
   {
     const prime = 31;
-    let result = 1;
+    var result = 1;
     result = prime * result + this.aval.hashCode();
     result = prime * result + this.fresh;
     return result;    
@@ -151,7 +151,7 @@ Store.prototype.diff = // debug
   {
     const diff = [];
     const entries = this.map.entries();
-    for (let i = 0; i < entries.length; i++)
+    for (var i = 0; i < entries.length; i++)
     {
       const entry = entries[i];
       const address = entry[0];
@@ -277,3 +277,11 @@ Store.prototype.keys =
   {
     return this.map.keys();
   }
+
+if (typeof module !== 'undefined' && module.exports != null) {
+
+    var common          = require('./common.js');
+    var HashMap         = common.HashMap;
+    var TrieMap         = common.TrieMap;
+    exports.Store = Store;
+}

@@ -759,6 +759,12 @@ Ast.findDeclarationNode =
     return false;
   }
 
+
+  if (typeof module !== 'undefined' && module.exports != null) {
+        var esprima = require('../stip/lib/esprima.js');
+        exports.Ast            = Ast;
+  }
+
 ////////////////
 
 //Ast.resolveLexicalBindings =

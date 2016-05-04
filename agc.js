@@ -1,6 +1,3 @@
-"use strict";
-"use strong";
-
 const Agc = {};
 
 Agc.collect =
@@ -34,3 +31,18 @@ Agc.addressReachable =
     reachable.add(address);
     Agc.addressesReachable(addresses, store, reachable);
   }
+
+    if (typeof module !== 'undefined' && module.exports != null) {
+
+      var common          = require('./common.js');
+      var HashMap         = common.HashMap;
+      var ArraySet        = common.ArraySet;
+      var Indexer         = common.Indexer;
+      var MutableHashSet  = common.MutableHashSet;
+      var assert                = common.assert;
+      var assertDefinedNotNull  = common.assertDefinedNotNull;
+      var lattice         = require('./lattice.js');
+      var Ecma            = lattice.Ecma;
+      var BOT             = lattice.BOT;           
+      exports.Agc  = Agc;
+    }
