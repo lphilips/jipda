@@ -7,6 +7,11 @@ var ast0src = "";
 ast0src += "Array.prototype.map = function (f) { var result = [];for (var i = 0; i < this.length; i++){result.push(f(this[i]))}; return result}\n";
 ast0src += "Array.prototype.filter = function (f) { var result = [];for (var i = 0; i < this.length; i++){var x = this[i]; if (f(x)) (result.push(x))}; return result}\n";
 ast0src += "Array.prototype.indexOf = function (x) { for (var i = 0; i < this.length; i++){if (this[i]===x) return i}; return -1}\n";
+ast0src += "Array.prototype.slice = function (x) {var result = []; for (var i = 0; i < x; i++){result.push(this[i])}; return result}\n";
+ast0src += "Array.prototype.forEach = function (f) { for (var i = 0; i < this.length; i++){f(this[i])};}\n";
+ast0src += "Array.prototype.find = function (f) {var result; for (var i = 0; i < this.length; i++) {var x = this[i]; if (f(x)) result = x;} return result;}\n"
+ast0src += "Array.prototype.sort = function (f) {var result; for (var i = 0; i < this.length; i++) {var x = this[i];}}\n"
+ast0src += "String.prototype.indexOf = function (x) { for (var i = 0; i < this.length; i++){if (this[i]===x) return i}; return -1}\n";
 const ast0 = Ast.createAst(ast0src);
 
 function jsCesk(cc)
